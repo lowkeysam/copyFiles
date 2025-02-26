@@ -1,22 +1,18 @@
-// Import necessary modules
 const fs = require('fs');
 const path = require('path');
 
-// Define the starting directory and target directory
 const startDir = path.resolve(__dirname); // Current directory where script is executed
-const targetDir = path.join(startDir, '..', 'repo'); // Repo folder in the parent directory
+const targetDir = path.join(startDir, '..', 'repo'); // Flattened output folder
 
-// Create the target directory if it doesn't exist
+// Ensure the target directory exists
 if (!fs.existsSync(targetDir)) {
   fs.mkdirSync(targetDir, { recursive: true });
 }
 
-// Function to recursively search and copy .ts and .tsx files
-function copyTsFiles(directory) {
-  // Read the contents of the current directory
+// Function to recursively find and copy .ts and .tsx files with a unique name
+function copyTsFiles(directory, baseDir = startDir) {
   const items = fs.readdirSync(directory);
 
-  // Iterate over each item in the directory
   items.forEach(item => {
     const itemPath = path.join(directory, item);
     const stat = fs.statSync(itemPath);
@@ -26,13 +22,15 @@ function copyTsFiles(directory) {
       return;
     }
 
-    // If the item is a directory, recursively search it
     if (stat.isDirectory()) {
-      copyTsFiles(itemPath);
-    }
-    // If the item is a .ts or .tsx file, copy it to the target directory
-    else if (stat.isFile() && (item.endsWith('.ts') || item.endsWith('.tsx'))) {
-      const targetPath = path.join(targetDir, path.basename(item));
+      copyTsFiles(itemPath, baseDir);
+    } else if (stat.isFile() && (item.endsWith('.ts') || item.endsWith('.tsx'))) {
+      // Compute the relative path and format the new filename
+      const relativePath = path.relative(baseDir, itemPath);
+      const formattedName = relativePath.replace(/[\/\\]/g, '-'); // Convert path separators to dashes
+      const targetPath = path.join(targetDir, formattedName);
+
+      // Copy the file
       fs.copyFileSync(itemPath, targetPath);
       console.log(`Copied: ${itemPath} to ${targetPath}`);
     }
@@ -42,4 +40,4 @@ function copyTsFiles(directory) {
 // Start the process
 copyTsFiles(startDir);
 
-console.log('All .ts and .tsx files have been copied to the repo folder.');
+console.log('All .ts and .tsx files have been copied to the repo folder with unique names.');
